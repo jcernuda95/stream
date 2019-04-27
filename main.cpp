@@ -1,6 +1,8 @@
 #include <iostream>
 #include "structs.h"
 #include "MetadataManager.h"
+#include "operators/abstract_stream_operator.h"
+#include "stream_operator_factory.h"
 #include <vector>
 #include <algorithm>
 #include <fstream>
@@ -12,38 +14,77 @@
 #include <thread>
 #include <atomic>
 #include <cstring>
+#include <sstream>
+#include <string>
 
-std::mutex queue;
+std::mutex input_queue_lock;
+std::mutex output_queue_lock;
 std::mutex mtx;
 std::condition_variable cv;
 
-void generateRequests(std::queue <StreamRequest>* iq, int number_requests, int number_streams[2],
+void generateRequests(std::queue <Operation>* iq, int number_requests, int number_streams[2],
                       int number_clients, int max_size_request, MetadataManager *MM);
-void printRequest(StreamRequest request);
+void printRequest(std::vector<StreamRequest> requests);
 void extractRequest(std::vector<StreamResponse> responses, StreamRequest *request);
+std::string mes2str(Message m);
+std::fstream& GotoLine(std::fstream& file, unsigned int num);
 
-void thread(std::queue <StreamRequest>  *input_queue,
-            std::queue <StreamResponse> *output_queue, // TODO: Change to an actual response for the server
+void thread(std::queue <Operation>  *input_queue,
+            std::queue <Operation> *output_queue, // TODO: Change to an actual response for the server
             MetadataManager *MM,
             std::atomic<bool>& working){
 
 //    std::unique_lock<std::mutex> lck(mtx);
-    StreamRequest request;
+    Operation op;
     while(working){
-        queue.lock();
+        input_queue_lock.lock();
         if(!input_queue->empty()){
-            request = input_queue->front();
+            op = input_queue->front();
             input_queue->pop();
-            queue.unlock();
+            input_queue_lock.unlock();
 
-            std::vector<StreamResponse> responses = MM->getStream(request);
+            for(int i = 0; i < op.requests.size(); i++){
+                std::vector<StreamResponse> responses = MM->getStream(op.requests[i]);
+                extractRequest(responses, &op.requests[i]);
+            }
 
-            extractRequest(responses, &request);
-
-            printRequest(request);
+            stream_operator_factory& factory = stream_operator_factory::getInstance();
+            switch(op.op) {
+                case JOIN:
+                    std::cout << "Join not implemented" << std::endl;
+                    break;
+                case FILTER:
+                    if(op.type != NONE){
+                        op.requests[0].buffer = factory.getOperator(FILTER, op.type, op.filter_func))->operate(op.requests[0].buffer);
+                    }
+                    else if(op.type == NONE){
+                        op.requests[0].buffer = factory.getOperator(FILTER, op.comparator, op.pivot))->operate(op.requests[0].buffer);
+                    }
+                    else{
+                        std::cout << "Error on Filter" << std::endl;
+                    }
+                    break;
+                case GROUP:
+                    op.requests[0].buffer = factory.getOperator(GROUP, op.type)->operate(op.requests[0].buffer);
+                    break;
+                case ORDER:
+                    op.requests[0].buffer = factory.getOperator(ORDER, op.order_ascending)->operate(op.requests[0].buffer);
+                    break;
+                case SUM:
+                    if(op.type != NONE){
+                        op.requests[0].buffer = factory.getOperator(SUM, op.type)->operate(op.requests[0].buffer);
+                    }
+                    else{
+                        op.requests[0].buffer = factory.getOperator(SUM)->operate(op.requests[0].buffer);
+                    }
+                    break;
+            }
+            output_queue_lock.lock();
+            output_queue->push(op);
+            output_queue_lock.unlock();
         }
         else{
-            queue.unlock();
+            input_queue_lock.unlock();
 //            cv.wait(lck);
 //            sleep(3);
 
@@ -68,8 +109,8 @@ int main() {
     std::vector<std::thread> threads;
     threads.reserve(num_threads);
 
-    std::queue <StreamRequest>  input_queue;
-    std::queue <StreamResponse> output_queue;
+    std::queue <Operation>  input_queue;
+    std::queue <Operation> output_queue;
 
     MetadataManager* MM = MetadataManager::getInstance();
     generateRequests(&input_queue, number_requests, number_streams, number_clients, max_size_request, MM);
@@ -96,12 +137,8 @@ int main() {
             (double) (tv2.tv_sec - tv1.tv_sec));
 }
 
-void generateRequests(std::queue <StreamRequest>* iq, int number_requests, int number_streams[2],
+void generateRequests(std::queue <Operation>* iq, int number_requests, int number_streams[2],
         int number_clients, int max_size_request, MetadataManager *MM){
-//    std::cout << "Number fo streams in memory " << number_streams[0] << std::endl;
-//    std::cout << "Number fo streams on disk " << number_streams[1] << std::endl;
-
-    int total_streams = number_streams[0] + number_streams[1];
 
     for(int i=0; i<number_streams[0]; i++){
         MM->registerStream(i, 0);
@@ -116,44 +153,97 @@ void generateRequests(std::queue <StreamRequest>* iq, int number_requests, int n
     }
 
     for(int i=0; i<number_requests; i++){
+        Operation op;
         StreamRequest temp;
         temp.size = 3;//(rand() % max_size_request) + 1;
         temp.stream = 1;//rand() % total_streams;
         temp.client = 0;//rand() % number_clients;
-        temp.buffer = new char[temp.size];
-        iq->push(temp);
+        temp.buffer.reserve(temp.size);
+        op.op = SUM;
+        op.type = INTEGER;
+        op.requests.push_back(temp);
+        iq->push(op);
     }
 }
 
-void printRequest(StreamRequest request){
-    std::cout << "Request " << request.client << "-" << request.stream << ": ";
-    for (uint i =0; i < request.size; i++)
-        std::cout << request.buffer[i] << ", ";
-    std::cout << " " << std::endl;
+void printRequest(std::vector<StreamRequest> requests) {
+    for(int i = 0; i < requests.size(); i++){
+        std::cout << "Request " << requests[i].client << "-" << requests[i].stream << ": ";
+        for (int i = 0; i < requests[i].buffer.size(); ++i) {
+            std::cout << mes2str(requests[i].buffer[i]) << " ";
+        }
+    }
+}
 
+std::ifstream& GotoLine(std::ifstream& file, unsigned int num){
+    file.seekg(std::ios::beg);
+    for(int i=0; i < num - 1; ++i){
+        file.ignore(std::numeric_limits<std::streamsize>::max(),'\n');
+    }
+    return file;
 }
 
 void extractRequest(std::vector<StreamResponse> responses, StreamRequest *request){
     uint j= 0;
     for(auto response = responses.begin(); response < responses.end(); response++){
         if(response->type == 0){ //object in memory
-            char* data = (char*) response->adress;
-//            std::copy(data + response->offset,
-//                      data + response->length - response->offset,
-//                      request->buffer + j);
-            std::memcpy(request->buffer + j,
-                    data + response->offset,
-                    response->length - response->offset
-                    );
-            j += request->size;
+            auto* data = (std::vector<Message>*) response->address;
+            auto first = data->begin() + response->offset;
+            auto last = data->begin() + response->length;
+            std::vector<Message> newVec(first, last);
+            request->buffer.insert(
+                    request->buffer.end(),
+                    std::make_move_iterator(newVec.begin()),
+                    std::make_move_iterator(newVec.end())
+            );
         }
         else if(response->type == 1){//object in drive
-            std::ifstream myfile ((char const*)response->adress);
+            std::ifstream myfile ((char const*)response->address);
             if (myfile.is_open())
             {
-                myfile.seekg(response->offset);
-                myfile.read(request->buffer + j, response->length - response->offset);
-                myfile.close();
+                GotoLine(myfile, response->offset);
+                for(int i = 0; i<(response->length-response->offset); i++){
+                    Message msg;
+                    std::string line;
+                    std::string type;
+
+                    myfile >> type;
+
+                    if (type == "INTEGER") {
+                        msg.type = INTEGER;
+                        myfile >> msg.size;
+                        int ft;
+                        myfile >> ft;
+                        msg.data = new int(ft);
+                    } else if (type == "FLOAT") {
+                        msg.type = FLOAT;
+                        myfile >> msg.size;
+                        float ft;
+                        myfile >> ft;
+                        msg.data = new float(ft);
+                    } else if (type == "DOUBLE") {
+                        msg.type = DOUBLE;
+                        myfile >> msg.size;
+                        double ft;
+                        myfile >> ft;
+                        msg.data = new double(ft);
+                    } else if (type == "STRING") {
+                        msg.type = STRING;
+                        myfile >> msg.size;
+                        std::string st;
+                        myfile >> st;
+                        auto char_array = new char[st.size() + 1];
+                        strcpy(char_array, st.c_str());
+                        msg.data = char_array;
+
+                    } else {
+                        std::cout << "Error, no type definition on file line";
+                    }
+
+                    request->buffer.push_back(msg);
+                }
+//                myfile.read(request->buffer + j, response->length - response->offset);
+            myfile.close();
             }
             else{
                 std::cout << "File not found" << std::endl;
@@ -163,4 +253,25 @@ void extractRequest(std::vector<StreamResponse> responses, StreamRequest *reques
             std::cout << "File type ot implemented" << std::endl;
         }
     }
+}
+
+std::string mes2str(Message m) {
+    std::ostringstream os;
+
+    switch (m.type) {
+        case INTEGER:
+            os << *(int*) m.data;
+            break;
+        case FLOAT:
+            os << *(float*) m.data;
+            break;
+        case DOUBLE:
+            os << *(double*) m.data;
+            break;
+        case STRING:
+            os << (char*) m.data;
+            break;
+    }
+
+    return os.str();
 }

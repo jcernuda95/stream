@@ -3,9 +3,34 @@
 
 #include <cstdint>
 #include <vector>
+#include <functional>
+
+typedef enum {
+    INTEGER,
+    FLOAT,
+    DOUBLE,
+    NUMERIC,
+    STRING,
+    NONE
+} DataType;
+
+typedef enum {
+    JOIN,
+    FILTER,
+    GROUP,
+    ORDER,
+    SUM
+} OperatorType;
+
+typedef struct {
+    DataType type;
+    size_t size;    // # of bytes of data
+    void *data;
+} Message;
+
 struct Partition{
-    void* address;
-    short type;
+    void *address;
+    short type;  // In memory == 0 or in disk == 1
     uint64_t length;
 };
 
@@ -24,8 +49,8 @@ struct Client{
 };
 
 struct StreamResponse{
-    void* adress;
-    short type;
+    void* address;
+    short type; // In memory == 0 or in disk == 1
     uint64_t length;
     uint64_t offset;
 };
@@ -34,6 +59,26 @@ struct StreamRequest{
     uint32_t client;
     uint32_t stream;
     uint64_t size;
-    char *buffer;
+    std::vector<Message> buffer;
 };
-#endif //CONCEPT_STRUCTS_H
+
+
+struct additionalParams{
+    bool order_ascending = false;
+    std::function< bool(T) > filter_func;
+    T pivot;
+    char comparator[2];
+};
+
+struct Operation{
+    std::vector<StreamRequest> requests;
+    OperatorType op;
+    DataType type;
+
+
+    // SUM either datatype or none
+    // Order datatype and optional bool
+    // Group dataType
+    // Filter std::function< bool(T) >( f ), dataType - {numeric, string}
+};
+

@@ -32,7 +32,7 @@ std::vector<StreamResponse> MetadataManager::getStream(StreamRequest request){
     StreamPosition stream_position = client_list[request.client].streams[request.stream];
     Partition partition = stream_list[request.stream].partition[stream_position.partition];
 
-    holder.adress = partition.address;
+    holder.address = partition.address;
     if (partition.length - stream_position.offset > request.size)
         holder.length = stream_position.offset + request.size;
     else
@@ -46,7 +46,7 @@ std::vector<StreamResponse> MetadataManager::getStream(StreamRequest request){
     while(request.size > 0){
         partition = stream_list[request.stream].partition[stream_position.partition + i];
 
-        holder.adress = partition.address;
+        holder.address = partition.address;
         if (partition.length > request.size)
             holder.length = request.size;
         else
@@ -97,6 +97,30 @@ void MetadataManager::registerClient(int ClientId){
         client0.streams.push_back(pos);
     }
     client_list.push_back(client0);
+}
+
+Message generateInt(int a) {
+    Message message;
+    message.type = INTEGER;
+    message.size = sizeof(int);
+    message.data = new int(a);
+    return message;
+}
+
+Message generateFloat(float a) {
+    Message message;
+    message.type = FLOAT;
+    message.size = sizeof(float);
+    message.data = new float(a);
+    return message;
+}
+
+Message generateDouble(double a) {
+    Message message;
+    message.type = DOUBLE;
+    message.size = sizeof(double);
+    message.data = new double(a);
+    return message;
 }
 
 void MetadataManager::registerStream(int Streamid, int Stream_location){
