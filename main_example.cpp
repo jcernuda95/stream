@@ -77,14 +77,16 @@ int main() {
     }
 
     stream_operator_factory& factory = stream_operator_factory::getInstance();
+    
+    resp1 = stream_operator_factory::getInstance().getOperator(SUM, NUMERIC)->operate(req);  // Numeric is the default type if none is specified
 
-    resp1 = stream_operator_factory::getInstance().getOperator(SUM, NUMERIC)->operate(req);
+    // resp2 = factory.getOperator(ORDER)->operate(req);      // Only works when all the messages are of the same type, optional bool argument
+                                                              // for ascending order true by default
 
-    // resp2 = factory.getOperator(ORDER)->operate(req);      // Only works when all the messages are of the same type
+    resp3 = factory.getOperator(GROUP, INTEGER)->operate(req);  // Returns the messages of the selected type only
 
-    resp3 = factory.getOperator(GROUP, INTEGER)->operate(req);
-
-    resp4 = factory.getOperator(FILTER, INTEGER, Function<int>([](int a) { return (a % 2) == 0;}))->operate(req);
+    resp4 = factory.getOperator(FILTER, INTEGER, Function<int>([](int a) { return (a % 2) == 0;}))->operate(req);  // Accepts any std::function, for lambdas you can use
+                                                                                                                   //  the lambda-> function transformer that is shown here
 
     std::cout << "ORIGINAL:\n[ ";
 
