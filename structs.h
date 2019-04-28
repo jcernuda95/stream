@@ -19,7 +19,8 @@ typedef enum {
     FILTER,
     GROUP,
     ORDER,
-    SUM
+    SUM,
+    NOP
 } OperatorType;
 
 typedef struct {
@@ -63,10 +64,11 @@ struct StreamRequest{
 };
 
 
-struct additionalParams{
-    bool order_ascending = false;
-    std::function< bool(T) > filter_func;
-    T pivot;
+struct AdditionalParams{
+    bool order_ascending;
+    std::function< bool(double) > filter_func;
+    std::function< bool(char*) > str_filter_func;
+    double pivot;
     char comparator[2];
 };
 
@@ -74,11 +76,11 @@ struct Operation{
     std::vector<StreamRequest> requests;
     OperatorType op;
     DataType type;
-
+    AdditionalParams ap;
 
     // SUM either datatype or none
     // Order datatype and optional bool
     // Group dataType
     // Filter std::function< bool(T) >( f ), dataType - {numeric, string}
 };
-
+#endif //CONCEPT_STRUCTS_H

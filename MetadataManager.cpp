@@ -99,73 +99,168 @@ void MetadataManager::registerClient(int ClientId){
     client_list.push_back(client0);
 }
 
-Message generateInt(int a) {
-    Message message;
-    message.type = INTEGER;
-    message.size = sizeof(int);
-    message.data = new int(a);
-    return message;
-}
 
-Message generateFloat(float a) {
-    Message message;
-    message.type = FLOAT;
-    message.size = sizeof(float);
-    message.data = new float(a);
-    return message;
-}
+void MetadataManager::registerStream(int Streamid, int Stream_location, ExpType exp_type, int len){
+    std::vector<Message> partition111;
+    std::vector<Message> partition121;
+    std::vector<Message> partition131;
+    std::vector<Message> partition141;
+    std::vector<Message> partition151;
 
-Message generateDouble(double a) {
-    Message message;
-    message.type = DOUBLE;
-    message.size = sizeof(double);
-    message.data = new double(a);
-    return message;
-}
+    std::vector<Message> partition211;
+    std::vector<Message> partition221;
+    std::vector<Message> partition231;
+    std::vector<Message> partition241;
+    std::vector<Message> partition251;
 
-void MetadataManager::registerStream(int Streamid, int Stream_location){
-    char const* partition11 = "abcdefghij";
-    char const* partition21 = "klmopqrstu";
-    char const* partition31 = "vwxyz12345";
-    char const* partition12 = "/home/jaime/Streams/stream1/partition1";
-    char const* partition22 = "/home/jaime/Streams/stream1/partition2";
-    char const* partition32 = "/home/jaime/Streams/stream1/partition3";
+
+    char const* partition112 = "/home/jaime/Streams/stream1/partition1";
+    char const* partition122 = "/home/jaime/Streams/stream1/partition2";
+    char const* partition132 = "/home/jaime/Streams/stream1/partition3";
+    char const* partition142 = "/home/jaime/Streams/stream1/partition4";
+    char const* partition152 = "/home/jaime/Streams/stream1/partition5";
+
+    char const* partition212 = "/home/jaime/Streams/stream2/partition1";
+    char const* partition222 = "/home/jaime/Streams/stream2/partition2";
+    char const* partition232 = "/home/jaime/Streams/stream2/partition3";
+    char const* partition242 = "/home/jaime/Streams/stream2/partition4";
+    char const* partition252 = "/home/jaime/Streams/stream2/partition5";
 
     if(Stream_location == 0){
         Stream stream0;
         Partition partition;
+        if(Streamid == 0) {
+            genStreamMemory(&partition111, len, exp_type);
+            partition.address = (void *) &partition111;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
 
-        partition.address = (void*)partition11;
-        partition.length = 10;
-        partition.type = 0;
-        stream0.partition.push_back(partition);
-        partition.address = (void*)partition21;
-        partition.length = 10;
-        partition.type = 0;
-        stream0.partition.push_back(partition);
-        partition.address = (void*)partition31;
-        partition.length = 10;
-        partition.type = 0;
-        stream0.partition.push_back(partition);
-        stream_list.push_back(stream0);
+            genStreamMemory(&partition121, len, exp_type);
+            partition.address = (void *) &partition121;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition131, len, exp_type);
+            partition.address = (void *) &partition131;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition141, len, exp_type);
+            partition.address = (void *) &partition141;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition151, len, exp_type);
+            partition.address = (void *) &partition151;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+            stream_list.push_back(stream0);
+        }
+        else if(Streamid == 1) {
+            genStreamMemory(&partition211, len, exp_type);
+            partition.address = (void *) &partition211;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition221, len, exp_type);
+            partition.address = (void *) &partition221;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition231, len, exp_type);
+            partition.address = (void *) &partition231;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition241, len, exp_type);
+            partition.address = (void *) &partition241;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+
+            genStreamMemory(&partition251, len, exp_type);
+            partition.address = (void *) &partition251;
+            partition.length = len;
+            partition.type = 0;
+            stream0.partition.push_back(partition);
+            stream_list.push_back(stream0);
+        }
     }
     else if(Stream_location == 1){
         Stream stream1;
         Partition partition;
+        if(Streamid == 0) {
+            genStreamDisk(partition112, len, exp_type);
+            partition.address = (void *) partition112;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
 
-        partition.address = (void*)partition12;
-        partition.length = 10;
-        partition.type = 1;
-        stream1.partition.push_back(partition);
-        partition.address = (void*)partition22;
-        partition.length = 10;
-        partition.type = 1;
-        stream1.partition.push_back(partition);
-        partition.address = (void*)partition32;
-        partition.length = 10;
-        partition.type = 1;
-        stream1.partition.push_back(partition);
-        stream_list.push_back(stream1);
+            genStreamDisk(partition122, len, exp_type);
+            partition.address = (void *) partition122;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition132, len, exp_type);
+            partition.address = (void *) partition132;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition142, len, exp_type);
+            partition.address = (void *) partition142;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition152, len, exp_type);
+            partition.address = (void *) partition152;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+            stream_list.push_back(stream1);
+        }
+        else if(Streamid == 1) {
+            genStreamDisk(partition212, len, exp_type);
+            partition.address = (void *) partition212;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition222, len, exp_type);
+            partition.address = (void *) partition222;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition232, len, exp_type);
+            partition.address = (void *) partition232;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition242, len, exp_type);
+            partition.address = (void *) partition242;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+
+            genStreamDisk(partition252, len, exp_type);
+            partition.address = (void *) partition252;
+            partition.length = len;
+            partition.type = 1;
+            stream1.partition.push_back(partition);
+            stream_list.push_back(stream1);
+        }
     }
 }
 

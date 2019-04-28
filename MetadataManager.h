@@ -1,8 +1,10 @@
-#ifndef CONCEPT_METADATAMANAGER_H
-#define CONCEPT_METADATAMANAGER_H
+#ifndef STREAM_METADATAMANAGER_H
+#define STREAM_METADATAMANAGER_H
+
 #include <vector>
 #include "structs.h"
 #include <mutex>
+#include "genStreams/genStreams.h"
 
 class MetadataManager{
 private:
@@ -18,9 +20,9 @@ public:
     std::vector<StreamResponse> getStream(StreamRequest Sr);
 
     void registerClient(int ClientId);
-    void registerStream(int Streamid, int Stream_location);
+    void registerStream(int Streamid, int Stream_location, ExpType exp_type, int len);
 
 };
 
 
-#endif //CONCEPT_METADATAMANAGER_H
+#endif //STREAM_METADATAMANAGER_H
